@@ -60,7 +60,6 @@ cd ../../../../eval/
 git clone https://github.com/Lifelong-Robot-Learning/LIBERO.git
 uv pip install -e LIBERO
 ```
-   If anything goes wrong, please refer to the [detailed installation guide](train/verl/minivla-oft/openvla-oft/LIBERO.md).
 
 
 ### Basic Usage
