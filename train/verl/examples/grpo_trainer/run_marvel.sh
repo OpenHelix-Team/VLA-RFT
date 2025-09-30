@@ -33,8 +33,8 @@ python3 -m verl.trainer.main_marvel_ppo \
     trainer.ac_reward_type='l1' \
     trainer.reward_fn=mae \
     trainer.logger=['tensorboard'] \
-    trainer.project_name='verl_grpo_example_vgpt' \
-    trainer.experiment_name='vla_rft' \
+    trainer.project_name='vla_rft' \
+    trainer.experiment_name='vla_rft_fm' \
     trainer.n_gpus_per_node=4 \
     trainer.nnodes=1 \
     trainer.save_freq=50 \
