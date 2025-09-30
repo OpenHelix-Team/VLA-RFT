@@ -23,7 +23,7 @@ data:
     no_aug: False
     segment_length: 9
     dataset_name: libero_4_task_suites_no_noops
-    dataset_path: /path/to/your/own/minivla-oft/data/modified_libero_rlds
+    dataset_path: /path/to/your/own/data/modified_libero_rlds
     resolution: [224, 224]
     
 
@@ -339,7 +339,7 @@ trainer:
   n_gpus_per_node: 8
   img_save_dir: null
   save_freq: 20
-  save_img_freq: 20
+  save_img_freq: 200
   save_last_freq: 100
   save_last_num: 1
   # auto: find the last ckpt to resume. If can't find, start from scratch

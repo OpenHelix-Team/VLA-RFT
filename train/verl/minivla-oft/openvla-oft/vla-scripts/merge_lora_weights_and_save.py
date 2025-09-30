@@ -1,4 +1,3 @@
-
 """
 Loads a checkpoint that only has a LoRA adapter (no merged model) and merges the adapter
 into the base OpenVLA model. Saves the final checkpoint in the same directory.
@@ -39,7 +38,7 @@ class ConvertConfig:
     # fmt: off
 
     base_checkpoint: Union[str, Path] = ""                   # Base model checkpoint path/dir (either openvla/openvla-7b or whichever model you fine-tuned / resumed training from)
-    lora_finetuned_checkpoint_dir: Union[str, Path] = "/202431205128/baseline/COPY/MARVEL/checkpoints/libero/rlvr/8.22/ckpt_150000_test_save/global_step_1/actor"     # Checkpoint directory containing the LoRA adapter
+    lora_finetuned_checkpoint_dir: Union[str, Path] = "checkpoints/libero/rlvr/8.22/ckpt_150000_test_save/global_step_1/actor"     # Checkpoint directory containing the LoRA adapter
     vlm_path: Union[str, Path] = "pretrained_models/prism-qwen25-extra-dinosiglip-224px-0_5b" 
     use_minivla: bool = True                        # 
 
@@ -61,7 +60,7 @@ def main(cfg: ConvertConfig) -> None:
         action_query_files = glob.glob(action_query_pattern)
         
         if action_query_files:
-            action_query_path = action_query_files[0]  # 取第一个匹配的文件
+            action_query_path = action_query_files[0]
             print(f"Found action_query file: {action_query_path}")
 
         aq_state_dict = torch.load(action_query_path, weights_only=True)
@@ -71,7 +70,7 @@ def main(cfg: ConvertConfig) -> None:
         vlm = load(cfg.vlm_path, hf_token=hf_token, load_for_training=True)
         config = AutoConfig.from_pretrained("pretrained_models/minivla/config.json")
         config.attn_implementation='flash_attention_2'
-        vla = AutoModelForVision2Seq.from_config(config).to(torch.bfloat16)  # 用配置新建模型，参数是随机初始化的
+        vla = AutoModelForVision2Seq.from_config(config).to(torch.bfloat16)
         # for name, param in model.named_parameters():
         #     print(f"{name}: {param.shape}")
         replace_map = [

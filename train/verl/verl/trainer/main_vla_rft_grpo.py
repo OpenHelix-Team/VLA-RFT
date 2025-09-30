@@ -14,7 +14,7 @@
 """
 Note that we don't combine the main with ray_trainer as ray_trainer is used by other main.
 """
-from verl.trainer.ppo.ray_trainer import RayMARVELPPOTrainer
+from verl.trainer.ppo.ray_trainer import RayVLARFTGRPOTrainer
 
 import os
 import ray
@@ -49,7 +49,7 @@ def get_custom_reward_fn(config):
     return getattr(module, function_name)
 
 
-@hydra.main(config_path='config', config_name='marvel_ppo_trainer', version_base=None)
+@hydra.main(config_path='config', config_name='vla_rft_grpo_trainer', version_base=None)
 def main(config):
     run_ppo(config)
 
@@ -171,7 +171,7 @@ class TaskRunner:
         #                                    reward_fn_key=config.data.reward_fn_key)
         resource_pool_manager = ResourcePoolManager(resource_pool_spec=resource_pool_spec, mapping=mapping)
 
-        trainer = RayMARVELPPOTrainer(config=config,
+        trainer = RayVLARFTGRPOTrainer(config=config,
                                 role_worker_mapping=role_worker_mapping,
                                 resource_pool_manager=resource_pool_manager,
                                 ray_worker_group_cls=ray_worker_group_cls)

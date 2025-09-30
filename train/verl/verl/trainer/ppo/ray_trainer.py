@@ -1002,10 +1002,8 @@ class RayPPOTrainer(object):
                 self.global_steps += 1
 
 
-from ivideogpt.data import DATASET_NAMED_MIXES, SimpleRoboticDataLoaderv2, EvalDataLoader
-from ivideogpt.tokenizer import TOKENIZER
+
 import cv2
-import pickle
 from prismatic.vla.datasets import RLDSDataset, RLDSBatchTransform_V1
 from torch.utils.data import DataLoader
 from prismatic.vla.action_tokenizer import ActionTokenizer
@@ -1022,7 +1020,7 @@ def print_batch(batch):
         print(batch.batch["input_ids"][i, :10])
 
 
-class RayMARVELPPOTrainer(RayPPOTrainer):
+class RayVLARFTGRPOTrainer(RayPPOTrainer):
     """
     Note that this trainer runs on the driver process on a single CPU/GPU node.
     """
@@ -1725,7 +1723,8 @@ class RayMARVELPPOTrainer(RayPPOTrainer):
                                 wm_batch,
                                 processed_pixels,
                                 return_reward_tensor=True,
-                                save_pred=(self.global_steps % self.config.trainer.save_img_freq == 0),
+                                # save_pred=(self.global_steps % self.config.trainer.save_img_freq == 0),
+                                save_pred=False,  
                             )
                             
                             metrics.update(losses)

@@ -20,9 +20,7 @@ import tqdm
 from libero.libero import benchmark
 
 import wandb
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import seaborn as sns
+
 
 # Append current directory so that interpreter can find experiments.robot
 sys.path.append("../..")
@@ -119,11 +117,6 @@ class GenerateConfig:
     env_img_res: int = 256                           # Resolution for environment images (not policy input resolution)
     run_single_task: bool = False                    # Whether to only run a single task (for debugging)
     single_task_id: Optional[int] = None             # If specified, only evaluate this task ID (0-indexed)  
-    disturb: bool = False                            # Whether to disturb the initial state
-    disturb_index: Optional[Union[int, list]] = None # Index (or list of indices) of the initial state to disturb (0-indexed). If None, a random index is chosen each run.
-    disturb_range: float = 0.5                       # Disturbance range [-x, +x], default 0.5
-    disturb_seed: int = 0                            # Random seed for disturbance sampling
-    disturb_seed_range: int = 1                      # Range of seeds for disturbance sampling (for multiple runs)
     #################################################################################################################
     # Utils
     #################################################################################################################
@@ -139,9 +132,6 @@ class GenerateConfig:
     # perturbation_seed: int = 0                       # Random seed for initial state perturbations
     # fmt: on
     save_version: str = "raw"                                           # version of exps
-    ckpt_name: str = "sft90000"                                         # Checkpoint name for organizing plots
-    existing_data_path: Optional[str] = None                            # Path to existing data for comparison plots
-
 def save_action_data(trajectory_actions, trajectory_successes, model_name, task_id, task_description, save_path, task_suite_name=None):
 
     data = {
@@ -436,141 +426,61 @@ def run_task(
     trajectory_successes = []
 
     # Start episodes
-    if cfg.disturb:
-        assert cfg.disturb_index is not None and cfg.disturb_range is not None, "Must specify `disturb_index` and `disturb_range` if `disturb==True`!"
-        disturb_seed = cfg.disturb_seed
-        for i in range(cfg.disturb_seed_range):
-            task_episodes, task_successes = 0, 0
-            log_message(f"\nCurrent disturb seed: {disturb_seed}", log_file)
-            for episode_idx in tqdm.tqdm(range(cfg.num_trials_per_task)):
-                log_message(f"\nTask: {task_description}", log_file)
-                # Handle initial state
-                if cfg.initial_states_path == "DEFAULT":
-                    initial_state = initial_states[episode_idx]
-                    np.random.seed(disturb_seed + episode_idx)
-                    # support disturb_index being int or list
-                    if isinstance(cfg.disturb_index, list):
-                        for idx in cfg.disturb_index:
-                            if idx < len(initial_state):
-                                perturbation = np.random.uniform(-cfg.disturb_range, cfg.disturb_range)
-                                if idx <= 5:
-                                    perturbation *= 10
-                                initial_state[idx] += perturbation
-                                log_message(f"Applied perturbation {perturbation:.4f} to dimension {idx}", log_file)
-                    else:
-                        if cfg.disturb_index < len(initial_state):
-                            perturbation = np.random.uniform(-cfg.disturb_range, cfg.disturb_range)
-                            initial_state[cfg.disturb_index] += perturbation
-                            log_message(f"Applied perturbation {perturbation:.4f} to dimension {cfg.disturb_index}", log_file)
-                else:
-                    # Get keys for fetching initial episode state from JSON
-                    initial_states_task_key = task_description.replace(" ", "_")
-                    episode_key = f"demo_{episode_idx}"
-
-                    # Skip episode if expert demonstration failed to complete the task
-                    if not all_initial_states[initial_states_task_key][episode_key]["success"]:
-                        log_message(f"Skipping task {task_id} episode {episode_idx} due to failed expert demo!", log_file)
-                        continue
-
-                    # Get initial state
-                    initial_state = np.array(all_initial_states[initial_states_task_key][episode_key]["initial_state"])
-
-                log_message(f"Starting episode {task_episodes + 1}...", log_file)
-
-                # Run episode
-                success, replay_images = run_episode(
-                    cfg,
-                    env,
-                    task_description,
-                    model,
-                    resize_size,
-                    processor,
-                    action_head,
-                    proprio_projector,
-                    noisy_action_projector,
-                    initial_state,
-                    log_file,
-                )
-                # Update counters
-                task_episodes += 1
-                total_episodes += 1
-                if success:
-                    task_successes += 1
-                    total_successes += 1
-
-                # Save replay video
-                save_rollout_video(
-                    replay_images, total_episodes, success=success, task_description=task_description, log_file=log_file, save_version=save_version
-                )
-
-                # Log results
-                log_message(f"Success: {success}", log_file)
-                log_message(f"# episodes completed so far: {total_episodes}", log_file)
-                log_message(f"# successes: {total_successes} ({total_successes / total_episodes * 100:.1f}%)", log_file)
-            disturb_seed += 1  # Increment seed for next disturbance run
-            # Log task results
-            task_success_rate = float(task_successes) / float(task_episodes) if task_episodes > 0 else 0
-            total_success_rate = float(total_successes) / float(total_episodes) if total_episodes > 0 else 0
-
-            log_message(f"Current task success rate: {task_success_rate}", log_file)
-            log_message(f"Current total success rate: {total_success_rate}", log_file)
-
-    else:
-        task_episodes, task_successes = 0, 0
-        for episode_idx in tqdm.tqdm(range(cfg.num_trials_per_task)):
-            log_message(f"\nTask: {task_description}", log_file)
+    task_episodes, task_successes = 0, 0
+    for episode_idx in tqdm.tqdm(range(cfg.num_trials_per_task)):
+        log_message(f"\nTask: {task_description}", log_file)
+        # breakpoint()
+        # Handle initial state
+        if cfg.initial_states_path == "DEFAULT":
+            # Use default initial state
+            initial_state = initial_states[episode_idx]
+            # initial_state = initial_states[0]  # DEBUG
             # breakpoint()
-            # Handle initial state
-            if cfg.initial_states_path == "DEFAULT":
-                # Use default initial state
-                initial_state = initial_states[episode_idx]
-                # initial_state = initial_states[0]  # DEBUG
-                # breakpoint()
-            else:
-                # Get keys for fetching initial episode state from JSON
-                initial_states_task_key = task_description.replace(" ", "_")
-                episode_key = f"demo_{episode_idx}"
+        else:
+            # Get keys for fetching initial episode state from JSON
+            initial_states_task_key = task_description.replace(" ", "_")
+            episode_key = f"demo_{episode_idx}"
 
-                # Skip episode if expert demonstration failed to complete the task
-                if not all_initial_states[initial_states_task_key][episode_key]["success"]:
-                    log_message(f"Skipping task {task_id} episode {episode_idx} due to failed expert demo!", log_file)
-                    continue
+            # Skip episode if expert demonstration failed to complete the task
+            if not all_initial_states[initial_states_task_key][episode_key]["success"]:
+                log_message(f"Skipping task {task_id} episode {episode_idx} due to failed expert demo!", log_file)
+                continue
 
-                # Get initial state
-                initial_state = np.array(all_initial_states[initial_states_task_key][episode_key]["initial_state"])
+            # Get initial state
+            initial_state = np.array(all_initial_states[initial_states_task_key][episode_key]["initial_state"])
 
-            log_message(f"Starting episode {task_episodes + 1}...", log_file)
+        log_message(f"Starting episode {task_episodes + 1}...", log_file)
 
-            # Run episode
-            success, replay_images = run_episode(
-                cfg,
-                env,
-                task_description,
-                model,
-                resize_size,
-                processor,
-                action_head,
-                proprio_projector,
-                noisy_action_projector,
-                initial_state,
-                log_file,
-            )
-            # Update counters
-            task_episodes += 1
-            total_episodes += 1
-            if success:
-                task_successes += 1
-                total_successes += 1
+        # Run episode
+        success, replay_images = run_episode(
+            cfg,
+            env,
+            task_description,
+            model,
+            resize_size,
+            processor,
+            action_head,
+            proprio_projector,
+            noisy_action_projector,
+            initial_state,
+            log_file,
+        )
+        # Update counters
+        task_episodes += 1
+        total_episodes += 1
+        if success:
+            task_successes += 1
+            total_successes += 1
 
-            # Save replay video
-            save_rollout_video(
-                replay_images, total_episodes, success=success, task_description=task_description, log_file=log_file, save_version=save_version
-            )
+        # Save replay video
+        save_rollout_video(
+            replay_images, total_episodes, success=success, task_description=task_description, log_file=log_file, save_version=save_version
+        )
 
-            # Log results
-            log_message(f"Success: {success}", log_file)
-            log_message(f"# episodes completed so far: {total_episodes}", log_file)
-            log_message(f"# successes: {total_successes} ({total_successes / total_episodes * 100:.1f}%)", log_file)
+        # Log results
+        log_message(f"Success: {success}", log_file)
+        log_message(f"# episodes completed so far: {total_episodes}", log_file)
+        log_message(f"# successes: {total_successes} ({total_successes / total_episodes * 100:.1f}%)", log_file)
 
 
         # Log task results

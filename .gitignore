@@ -3,10 +3,10 @@
 .venv
 checkpoints
 logs
-third_party
 plots
 logs
 scripts_origin
 **/core.*
 **/data
 **/test
+**/eval

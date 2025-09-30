@@ -52,14 +52,11 @@ install_requires = [
 TEST_REQUIRES = ['pytest', 'yapf', 'py-spy']
 PRIME_REQUIRES = ['pyext']
 GEO_REQUIRES = ['mathruler']
-# GPU_REQUIRES = ['liger-kernel', 'flash-attn']
 GPU_REQUIRES = ['liger-kernel']
 MATH_REQUIRES = ['math-verify']  # Add math-verify as an optional dependency
 VLLM_REQUIRES = [
 'tensordict<=0.6.2',
-# 'cupy-cuda11x',
 'vllm==0.6.3',
-# '--find-links https://download.pytorch.org/whl/cu118'  # Specify CUDA 11.8 package index
 ]
 SGLANG_REQUIRES = [
   'tensordict<=0.6.2', 

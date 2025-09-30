@@ -1,8 +1,9 @@
 set -x
 
-python3 -m verl.trainer.main_marvel_ppo \
+python3 -m verl.trainer.main_vla_rft_grpo \
     processor.use_img_gt_ac=True \
     data.train_batch_size=16 \
+    data.video.dataset_path=data/modified_libero_rlds \
     data.video.dataset_name=libero_${LIBERO_TASK_NAME}_no_noops \
     processor.action_dim=7 \
     processor.action_ranges_path=train/verl/ivideogpt/configs/libero_action_ranges.pth \
@@ -39,11 +40,10 @@ python3 -m verl.trainer.main_marvel_ppo \
     trainer.nnodes=1 \
     trainer.save_freq=50 \
     trainer.save_last_freq=20 \
-    trainer.save_img_freq=1 \
     trainer.save_last_num=2 \
     trainer.val_iters=10 \
     trainer.test_freq=-1 \
-    trainer.default_local_dir=checkpoints/libero/rlvr/ckpt_${CKPT_STEPS}/${POST_EXP_NAME}_${date_today} \
+    trainer.default_local_dir=checkpoints/libero/rlvr/ckpt_${CKPT_STEPS}/${POST_EXP_NAME}_${DATE} \
     trainer.img_save_dir=plots/pred_traj/${LIBERO_TASK_NAME} \
     trainer.total_training_steps=1 \
     trainer.msp_reward_aggregate=mean \
@@ -77,3 +77,4 @@ python3 -m verl.trainer.main_marvel_ppo \
     processor.processor_type=ctx_msp \
     processor.max_length=1663 \
     actor_rollout_ref.model.ckpt_path=checkpoints/libero/rlvr/150000base \
+    actor_rollout_ref.model.cfg_path=checkpoints/libero/rlvr/150000base/config.json \

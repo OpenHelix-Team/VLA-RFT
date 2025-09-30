@@ -19,7 +19,6 @@ def get_libero_env(task, model_family, resolution=256):
     """Initializes and returns the LIBERO environment, along with the task description."""
     task_description = task.language
     task_bddl_file = os.path.join(get_libero_path("bddl_files"), task.problem_folder, task.bddl_file)
-    # task_bddl_file = '/202431205128/baseline/COPY/MARVEL/eval/LIBERO/libero/libero/bddl_files/test/libero_spatial/pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate.bddl'
     env_args = {"bddl_file_name": task_bddl_file, "camera_heights": resolution, "camera_widths": resolution}
     # breakpoint()
     env = OffScreenRenderEnv(**env_args)

@@ -227,8 +227,7 @@ class FSDPCheckpointManager_w_lora_extra_model(FSDPCheckpointManager):
                 self.previous_saved_paths = self.previous_saved_paths[keep_start:]
             if isinstance(local_path, str):
                 local_path = Path(local_path)
-            local_path = self.local_mkdir(local_path)
-            adapter_path = self.local_mkdir(local_path / 'lora_adapter')
+            local_path = Path(self.local_mkdir(local_path))
             torch.distributed.barrier()
 
             state_dict_cfg = FullStateDictConfig(offload_to_cpu=True, rank0_only=True)
