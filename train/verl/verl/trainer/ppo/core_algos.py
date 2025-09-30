@@ -149,20 +149,6 @@ def compute_grpo_outcome_advantage(token_level_rewards: torch.Tensor,
         else:
             for i in range(bsz):
                 scores[i] = (scores[i] - id2mean[index[i]]) / (id2std[index[i]] + epsilon)
-        # for i in range(5):
-        #     sc = scores[i].item()
-        #     μ = id2mean[index[i]].item()
-        #     adv_raw = sc - μ
-        #     print(f"i={i:2d}  idx={index[i]}  Rt={sc:+4.2f}  baseline={μ:+4.2f}  adv_raw={adv_raw:+4.2f}")
-        # batch norm
-        # scores_flat = scores.flatten()
-        # scores_mean = scores_flat.mean()
-        # scores_std = scores_flat.std() + epsilon
-        # scores = (scores - scores_mean) / scores_std
-        # breakpoint()
-        # pos = scores[scores>0];  neg = scores[scores<0]
-        # scores[scores>0] = pos / (pos.std(unbiased=False)+1e-8)
-        # scores[scores<0] = neg / (neg.std(unbiased=False)+1e-8)
         scores = scores.unsqueeze(-1) * response_mask
     return scores, scores
 

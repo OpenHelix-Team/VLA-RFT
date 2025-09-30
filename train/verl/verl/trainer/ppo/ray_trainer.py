@@ -1015,11 +1015,6 @@ LOSS_KEYS = ['lpips', 'mse', 'mae', 'ssim', 'psnr']
 
 
 
-def print_batch(batch):
-    for i in range(10):
-        print(batch.batch["input_ids"][i, :10])
-
-
 class RayVLARFTGRPOTrainer(RayPPOTrainer):
     """
     Note that this trainer runs on the driver process on a single CPU/GPU node.
@@ -1161,7 +1156,7 @@ class RayVLARFTGRPOTrainer(RayPPOTrainer):
 
     def _create_dataloader(self):
         config = self.config.data.video
-        #  TODO: processor should keep unchanged during training and inference
+
         if self.use_reference_policy:
             processor_list = self.ref_policy_wg.get_processor()
             processor = processor_list[0]
@@ -1249,8 +1244,7 @@ class RayVLARFTGRPOTrainer(RayPPOTrainer):
                 recon_loss = torch.mean(torch.abs(real - pred), dim=(1, 2, 3))
             else:
                 raise NotImplementedError(f"Unsupported reward function: {self.config.trainer.reward_fn}")
-            # recon_loss = self.tokenizer_wg.recon_loss(DataProto.from_single_dict({"real": real, "pred": pred}))
-            # recon_loss = recon_loss.batch['recon_loss']
+
             
             if 'perceptual_loss' in detokenize_output.batch.keys():
                 perceptual_loss = detokenize_output.batch['perceptual_loss']
@@ -1322,7 +1316,6 @@ class RayVLARFTGRPOTrainer(RayPPOTrainer):
             gt_output_tokens = gt_output_tokens.clamp(0, self.config.processor.visual_token_num - 1).long()
             detokenize_output = self.tokenizer_wg.detokenize(
                 DataProto.from_single_dict({"tokens": output_tokens, "ctx_tokens": ctx_tokens}),
-                # DataProto.from_single_dict({"real": pixels_before_repeat[:, 2:]}, meta_info={'lpips': True}),
                 DataProto.from_single_dict({"real": gt_output_tokens}, meta_info={'lpips': True, 'recon': self.config.trainer.reward_fn}),
             )
         else:
@@ -1365,17 +1358,14 @@ class RayVLARFTGRPOTrainer(RayPPOTrainer):
         if not return_reward_tensor:
             return loss
 
-        # print("loss", loss.mean().item(), flush=True)
-        # print("recon_loss", recon_loss.mean().item(), flush=True)
-        # print("perceptual_loss", perceptual_loss.mean().item(), flush=True)
+
         if save_pred:
-            # breakpoint()
+
             pred = detokenize_output.batch['pixels'].clamp(0.0, 1.0)[:, 1:]
             real = pixels.batch['pixels'][:, 2:]
             if self.config.world_model_rollout.rollout.w_gt_ac:
                 gt_ac_gen = detokenize_output.batch['real']
-                for i in range(len(batch)):
-                # for i in range(1):
+                for i in range(5):
                     real_traj = torch.cat([real[i:i+1, j] for j in range(real.shape[1])], dim=-1)
                     pred_traj = torch.cat([pred[i:i+1, j] for j in range(pred.shape[1])], dim=-1)
                     gt_ac_gen_traj = torch.cat([gt_ac_gen[i:i+1, j] for j in range(gt_ac_gen.shape[1])], dim=-1)
@@ -1387,7 +1377,7 @@ class RayVLARFTGRPOTrainer(RayPPOTrainer):
                         torch.abs(real_traj-pred_traj).float(),
                     ], dim=-2), f"{self.config.trainer.experiment_name}-{i}", -loss[i].item())
             else:
-                for i in range(len(batch)):
+                for i in range(5):
                     real_traj = torch.cat([real[i:i+1, j] for j in range(real.shape[1])], dim=-1)
                     pred_traj = torch.cat([pred[i:i+1, j] for j in range(pred.shape[1])], dim=-1)
                     self.plot_img(torch.cat([
@@ -1398,8 +1388,7 @@ class RayVLARFTGRPOTrainer(RayPPOTrainer):
 
         reward_tensor = torch.zeros_like(batch.batch['responses'], dtype=torch.float32)
 
-        # baseline_loss = getattr(self.config.trainer, 'baseline_loss', 0.0)
-        # reward_weight = getattr(self.config.trainer, 'reward_weight', 1.0)
+
         for i in range(len(batch)):
             data_item = batch[i]
             prompt_ids = data_item.batch['prompts']
@@ -1612,7 +1601,7 @@ class RayVLARFTGRPOTrainer(RayPPOTrainer):
                     actor_gen_batch = actor_gen_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
                     noise_batch_partial = noise_batch.pop(batch_keys=['noise'])
                     actor_gen_batch = actor_gen_batch.union(noise_batch_partial)
-                    # breakpoint()
+
                     # rollout actions
                     with _timer('ac_rollout', timing_raw):
                         actor_batch_output = self.actor_rollout_wg.generate_actions(actor_gen_batch)  
@@ -1706,16 +1695,11 @@ class RayVLARFTGRPOTrainer(RayPPOTrainer):
                                 batch = batch.union(values)
 
                         with _timer('adv', timing_raw):
-                        # we combine with rule-based rm
-                            # compute scores. Support both model and function-based.
-                            # We first compute the scores using reward model. Then, we call reward_fn to combine
-                            # the results from reward model and rule-based results.
                             if self.use_rm:
                                 # we first compute reward model score
                                 reward_tensor = self.rm_wg.compute_rm_score(batch)
                                 batch = batch.union(reward_tensor)
 
-                            # we combine with rule-based rm
                             reward_fn = self.msp_reward_fn if self.config.processor.processor_type == 'ctx_msp' else self.reward_fn
                             # breakpoint()
 
@@ -1723,7 +1707,6 @@ class RayVLARFTGRPOTrainer(RayPPOTrainer):
                                 wm_batch,
                                 processed_pixels,
                                 return_reward_tensor=True,
-                                # save_pred=(self.global_steps % self.config.trainer.save_img_freq == 0),
                                 save_pred=False,  
                             )
                             
@@ -1733,11 +1716,11 @@ class RayVLARFTGRPOTrainer(RayPPOTrainer):
                             wm_batch.batch['token_level_scores'] = reward_tensor
                             
 
-                            # print(f'{list(reward_extra_infos_dict.keys())=}')
+
                             if reward_extra_infos_dict:
                                 wm_batch.non_tensor_batch.update({k: np.array(v) for k, v in reward_extra_infos_dict.items()})
 
-                            # breakpoint()
+
                             # compute rewards. apply_kl_penalty if available
                             if self.config.algorithm.use_kl_in_reward:
                                 wm_batch, kl_metrics = apply_kl_penalty(batch,
@@ -1775,15 +1758,6 @@ class RayVLARFTGRPOTrainer(RayPPOTrainer):
                         actor_output_metrics = reduce_metrics(actor_output.meta_info['metrics'])
                         metrics.update(actor_output_metrics)
                     
-                    # breakpoint()
-                    # validate
-                    # if self.config.trainer.test_freq > 0 and \
-                    #     (is_last_step or  self.global_steps % self.config.trainer.test_freq == 0):
-                    #     with _timer('testing', timing_raw):
-                    #         val_metrics: dict = self._validate()
-                    #         if is_last_step:
-                    #             last_val_metrics = val_metrics
-                    #     metrics.update(val_metrics)
 
                     if self.config.trainer.save_freq > 0 and ( is_last_step or \
                             self.global_steps % self.config.trainer.save_freq == 0):
@@ -1796,14 +1770,7 @@ class RayVLARFTGRPOTrainer(RayPPOTrainer):
 
                 # collect metrics
                 metrics.update(compute_data_metrics(batch=actor_batch, use_critic=self.use_critic))
-                # metrics.update(compute_timing_metrics(batch=actor_batch, timing_raw=timing_raw))
-                # TODO: implement actual tflpo and theoretical tflpo
-                # n_gpus = self.resource_pool_manager.get_n_gpus()
-                # metrics.update(compute_throughout_metrics(batch=batch, timing_raw=timing_raw, n_gpus=n_gpus))
-                
-                # pickle.dump(batch, open(f"plots/{self.config.trainer.experiment_name}-batch-{self.global_steps}.pkl", "wb"))
 
-                # TODO: make a canonical logger that supports various backend
                 logger.log(data=metrics, step=self.global_steps)
 
                 if is_last_step:

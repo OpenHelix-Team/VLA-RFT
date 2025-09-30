@@ -304,88 +304,6 @@ class ActorRolloutRefWorker(Worker):
                 from liger_kernel.transformers.monkey_patch import _apply_liger_kernel_to_instance
                 _apply_liger_kernel_to_instance(model=actor_module)
 
-            # if role == 'actor' and optim_config is not None and optim_config.lora_rank > 0:
-            #     from peft import LoraConfig, get_peft_model
-            #     # name_list=[]
-            #     # param_list=[]
-            #     # for name, param in actor_module.named_parameters():
-            #     #     name_list.append(name)
-            #     #     param_list.append(param)
-            #     # breakpoint()
-            #     lora_config = LoraConfig(
-            #         r=optim_config.lora_rank,
-            #         lora_alpha=0.5 * optim_config.lora_rank,
-            #         lora_dropout=optim_config.lora_dropout,
-            #         # target_modules=["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
-            #         target_modules="all-linear",
-            #         # init_lora_weights="gaussian",
-            #         # init_lora_weights="lora",
-            #     )
-            #     actor_module = get_peft_model(actor_module, lora_config)
-
-            #     #     if "action_queries" in name:
-            #     #         # breakpoint()
-            #     #         param.requires_grad = True
-                            
-            #     actor_module.print_trainable_parameters()
-                # from peft import LoraConfig, get_peft_model
-                # import re
-
-                # # Only allow these layers' LoRA to participate in training (LoRA injected below threshold but frozen = no effect)
-                # FREEZE_BELOW_LLM       = 12   # Train LLM layers [12..23]
-                # FREEZE_BELOW_VIT_DINO  = 12   # Train DINO layers [12..23]
-                # FREEZE_BELOW_VIT_FUSED = 14   # Train SigLIP/Fused layers [14..26]
-
-                # # Match linear layer names for both LLM and ViT
-                # LLM_LINEAR = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
-                # VIT_LINEAR = ["fc1", "fc2"]
-
-                # # ---- Single LoRA adapter covering three main branches ----
-                # lora_cfg = LoraConfig(
-                #     r=optim_config.lora_rank,
-                #     lora_alpha=optim_config.lora_rank,
-                #     lora_dropout=optim_config.lora_dropout,
-                #     target_modules=LLM_LINEAR + VIT_LINEAR,   # Match linear layers across all three components at once
-                #     init_lora_weights="gaussian",
-                # )
-                # actor_module = get_peft_model(actor_module, lora_cfg)  # Adapter name defaults to "default"
-
-                # # ---- After injection, precisely freeze lower layer LoRA (based on layer number in parameter name) ----
-                # re_llm   = re.compile(r"language_model\.model\.layers\.(\d+)\.")
-                # re_dino  = re.compile(r"vision_backbone\.featurizer\.blocks\.(\d+)\.")
-                # re_fused = re.compile(r"vision_backbone\.fused_featurizer\.blocks\.(\d+)\.")
-
-                # frozen, trainable = 0, 0
-                # for name, p in actor_module.named_parameters():
-                #     if "lora_" not in name:   # Only process LoRA weights
-                #         continue
-
-                #     # LLM lower layers
-                #     m = re_llm.search(name)
-                #     if m and int(m.group(1)) < FREEZE_BELOW_LLM:
-                #         p.requires_grad = False
-                #         frozen += p.numel()
-                #         continue
-
-                #     # DINO lower layers
-                #     m = re_dino.search(name)
-                #     if m and int(m.group(1)) < FREEZE_BELOW_VIT_DINO:
-                #         p.requires_grad = False
-                #         frozen += p.numel()
-                #         continue
-
-                #     # SigLIP/Fused lower layers
-                #     m = re_fused.search(name)
-                #     if m and int(m.group(1)) < FREEZE_BELOW_VIT_FUSED:
-                #         p.requires_grad = False
-                #         frozen += p.numel()
-                #         continue
-
-                #     trainable += p.numel()
-
-                # print(f"[LoRA] trainable params: {trainable}, frozen(low layers): {frozen}")
-                # actor_module.print_trainable_parameters()
-
             actor_module.to(torch_dtype)
 
             if enable_gradient_checkpointing:
@@ -502,26 +420,20 @@ class ActorRolloutRefWorker(Worker):
             sigma_wd = _oget(optim_config, "sigma_weight_decay", 0.0)
 
             # —— Parameter grouping —— #
-            # actor_params   = [p for p in actor_module_fsdp.parameters() if p.requires_grad]
-            # queries_params = list(actor_module.action_queries.parameters())  # Ignored by FSDP, needs to be added separately
             head_params    = [p for p in self.action_head.parameters() if p.requires_grad]
             proj_params    = [p for p in self.noisy_action_projector.parameters() if p.requires_grad] + \
                             [p for p in self.proprio_projector.parameters() if p.requires_grad]
             sigma_params   = [p for p in self.sigma_net.parameters() if p.requires_grad]
 
             if self.rank == 0:
-                # print(f"# actor params:   {sum(p.numel() for p in actor_params):,}")
-                # print(f"# queries params: {sum(p.numel() for p in queries_params):,}")
                 print(f"# head params:    {sum(p.numel() for p in head_params):,}")
                 print(f"# projector params:{sum(p.numel() for p in proj_params):,}")
                 print(f"# sigma params:   {sum(p.numel() for p in sigma_params):,}")
-                # total = sum(p.numel() for p in (actor_params + head_params + proj_params + sigma_params))
                 total = sum(p.numel() for p in (head_params + proj_params + sigma_params))
                 print(f"# total trainable params: {total:,}")
 
             param_groups = [
                 {   # Base group: VLA(Actor/FSDP) + action_head + two projectors
-                    # "params": actor_params + head_params + proj_params,
                     "params": head_params + proj_params,
                     "lr": base_lr,
                     "weight_decay": wd,
@@ -536,18 +448,6 @@ class ActorRolloutRefWorker(Worker):
 
             actor_optimizer = optim.AdamW(param_groups, betas=betas)
 
-            # # —— Unified scheduling (two param groups will scale together according to their respective lr ratios) —— #
-            # total_steps = _oget(optim_config, "total_training_steps", 0)
-            # num_warmup_steps = _oget(optim_config, "lr_warmup_steps", -1)
-            # if num_warmup_steps < 0:
-            #     num_warmup_steps_ratio = _oget(optim_config, "lr_warmup_steps_ratio", 0.0)
-            #     num_warmup_steps = int(num_warmup_steps_ratio * total_steps)
-
-            # print(f"Total steps: {total_steps}, num_warmup_steps: {num_warmup_steps}")
-            # actor_lr_scheduler = get_constant_schedule_with_warmup(
-            #     optimizer=actor_optimizer,
-            #     num_warmup_steps=num_warmup_steps
-            # )
             total_steps = _oget(optim_config, "total_training_steps", 0)
             num_warmup_steps = _oget(optim_config, "lr_warmup_steps", -1)
             if num_warmup_steps < 0:

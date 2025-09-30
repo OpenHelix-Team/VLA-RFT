@@ -56,8 +56,8 @@ actor_rollout_ref:
   pad_token_id: ${processor.pad_token_id}
   hybrid_engine: True
   model:
-    ckpt_path: checkpoints/minivla/base/minivla+libero_4_task_suites_no_noops+b16+lr-0.0001+lora-r64+dropout-0.0--image_aug--v1--minivla--lora64a128--token_64--4_task--2025-08-10_11-15-13--150000_chkpt
-    cfg_path: /path/to/your/own/minivla-oft/pretrained_models/minivla/config.json
+    ckpt_path: null
+    cfg_path: null
 
     external_lib: null
     override_config: { }
