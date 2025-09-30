@@ -110,7 +110,12 @@ With fewer than 400 fine-tuning steps, VLA-RFT surpasses strong supervised basel
 </div>
 *Please refer to our paper for detailed benchmark results.*
 
+## 📝 TODO
 
+- [x] Init codebase
+- [ ] Release pre-trained and rft VLA(policy) weights
+- [ ] Release pre-trained World Model weights
+- [ ] Support real-world deployment
 
 ## 📄 License
 
@@ -133,16 +138,6 @@ If you use VLA-RFT in your research, please cite:
   year={2025}
 }
 ```
-
-
-## 📝 TODO
-
-- [x] Init codebase
-- [ ] Release pre-trained and rft VLA(policy) weights
-- [ ] Release pre-trained World Model weights
-- [ ] Support real-world deployment
-- 
-...
 
 
 ## 🙏 Acknowledgments
