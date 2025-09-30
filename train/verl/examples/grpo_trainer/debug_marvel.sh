@@ -31,8 +31,8 @@ python3 -m verl.trainer.main_marvel_ppo \
     algorithm.use_kl_in_reward=False \
     trainer.reward_fn=mae \
     trainer.logger=['tensorboard'] \
-    trainer.project_name='verl_grpo_example_vgpt' \
-    trainer.experiment_name='ctx_vgpt_msp8' \
+    trainer.project_name='vla_rft' \
+    trainer.experiment_name='vla_rft_use_fm' \
     trainer.n_gpus_per_node=2 \
     trainer.nnodes=1 \
     trainer.save_freq=50 \
