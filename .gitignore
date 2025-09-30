@@ -1,12 +1,6 @@
 .DS_Store
 /.idea
 .venv
-checkpoints
-logs
-plots
-logs
 scripts_origin
 **/core.*
-**/data
 **/test
-**/eval
