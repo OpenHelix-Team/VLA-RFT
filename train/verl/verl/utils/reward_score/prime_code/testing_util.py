@@ -673,7 +673,7 @@ def reliability_guard(maximum_memory_bytes=None):
     os.environ["OMP_NUM_THREADS"] = "1"
 
     os.kill = None
-    os.system = None  # 防止干扰repl评测
+    os.system = None  # Prevent interference with repl evaluation
     os.putenv = None
     os.remove = None
     os.removedirs = None

@@ -1163,7 +1163,7 @@ class RayMARVELPPOTrainer(RayPPOTrainer):
 
     def _create_dataloader(self):
         config = self.config.data.video
-        #  TODO： processor should keep unchanged during training and inference
+        #  TODO: processor should keep unchanged during training and inference
         if self.use_reference_policy:
             processor_list = self.ref_policy_wg.get_processor()
             processor = processor_list[0]

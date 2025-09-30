@@ -16,7 +16,7 @@ from transformers.modeling_outputs import CausalLMOutputWithPast
 __all__ = ['HFRollout']
 
 
-def _unwrap(m: nn.Module) -> nn.Module:  # >>> NEW: 兼容 DDP/FSDP 包装
+def _unwrap(m: nn.Module) -> nn.Module:  # >>> NEW: Compatible with DDP/FSDP wrapping
     return m.module if hasattr(m, "module") else m
 
 
@@ -28,7 +28,7 @@ class HFRollout(BaseRollout):
         super().__init__()
         self.config = config
         self.module = module
-        self.action_head = _unwrap(action_head)                 # >>> NEW: 统一 unwrap
+        self.action_head = _unwrap(action_head)                 # >>> NEW: Unified unwrap
         self.proprio_projector = _unwrap(proprio_projector)     # >>> NEW
         self.noisy_action_projector = _unwrap(noisy_action_projector)  # >>> NEW
         self.sigma_net = _unwrap(sigma_net)                     # >>> NEW
@@ -79,18 +79,18 @@ class HFRollout(BaseRollout):
         num_patches = self.config.num_patches
         num_tokens = self.config.num_tokens
 
-        # ---- Flow 步数/时间参数（反向积分：t 1→0, dt<0） ----
+        # ---- Flow steps/time parameters (reverse integration: t 1→0, dt<0) ----
         K  = self.action_head.num_flow_steps
         dt = torch.tensor(-1.0 / K, dtype=torch.bfloat16, device=noise.device)
         t_start = torch.tensor(1.0, dtype=torch.bfloat16, device=noise.device)
         time = t_start.clone()
 
-        # ---- 存整条链（供后续复现 logp） ----
+        # ---- Store the entire chain (for subsequent logp reproduction) ----
         x_chain = torch.empty(B, K+1, chunk_len, action_dim,
                             device=noise.device, dtype=noise.dtype)
         x_chain[:, 0] = noise
 
-        # rollout 统一 eval + 采样（使用 sigma_net）
+        # rollout unified eval + sampling (using sigma_net)
         self.set_to_eval()
         curr_noisy_actions = noise
 
@@ -108,7 +108,7 @@ class HFRollout(BaseRollout):
                     output_hidden_states=True,
                     proprio=None,
                     proprio_projector=None,
-                    noisy_actions=None,                # 把 x_k 写回动作 token
+                    noisy_actions=None,                # Write x_k back to action tokens
                     noisy_action_projector=None,
                     use_film=False,
                 )
@@ -122,14 +122,14 @@ class HFRollout(BaseRollout):
                 all_hidden_states = torch.cat((task_latent_states, actions_hidden_states), 2)
                 
                 k = 0
-                while time >= -dt / 2:  # 共 K 步
+                while time >= -dt / 2:  # Total K steps
                     
                     timesteps = torch.Tensor([1.0-time]).to(noise.device)
                     timestep_embeddings = (
                         self.action_head.time_encoder(timesteps).to(curr_noisy_actions.dtype).to(curr_noisy_actions.device)
                     )  # (1, )
 
-                    # 预测速度 & 均值
+                    # Predict velocity & mean
                     flow_pred = self.action_head.predict_flow(all_hidden_states,
                                                         noisy_actions=curr_noisy_actions,
                                                         timestep_embeddings=timestep_embeddings,
@@ -139,7 +139,7 @@ class HFRollout(BaseRollout):
                                                         )   # (B, chunk_len, action_dim)
                     mean_next = curr_noisy_actions + dt * flow_pred
 
-                    # 预测 std 并采样（始终随机采样，便于后续用同一条链复现 logp）
+                    # Predict std and sample (always random sampling for subsequent logp reproduction using the same chain)
                     std, _ = self.sigma_net(all_hidden_states,
                                          noisy_actions=curr_noisy_actions,
                                          timestep_embeddings=timestep_embeddings,
@@ -160,12 +160,12 @@ class HFRollout(BaseRollout):
 
         predicted_actions = curr_noisy_actions
 
-        # —— 仅返回 rollout 结果与复现 logp 所需最小集 —— 
+        # —— Only return rollout results and minimal set needed for logp reproduction —— 
         batch = TensorDict(
             {
                 "predicted_actions": predicted_actions,          # (B, chunk_len, action_dim)
                 "x_chain": x_chain,                              # (B, K+1, chunk_len, action_dim)
-                # 复算时需要的条件与切片：
+                # Conditions and slices needed for recomputation:
                 "input_ids": idx,
                 "attention_mask": attention_mask,
                 "labels": labels,

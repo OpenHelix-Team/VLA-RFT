@@ -10,14 +10,14 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--ckpt_path', required=True)
-parser.add_argument('--config_path', default='/202431205128/baseline/MARVEL/checkpoints/worldmodel/final_version/backbone')
+parser.add_argument('--config_path', default='checkpoints/worldmodel/final_version/backbone')
 args = parser.parse_args()
 
 def dtensor_to_tensor(state_dict):
     new_state_dict = {}
     for key, value in state_dict.items():
         if isinstance(value, DTensor):
-            # 提取 DTensor 的本地张量部分
+            # Extract local tensor part from DTensor
             new_value = value._local_tensor.detach().clone()
         else:
             new_value = value.detach().clone() if torch.is_tensor(value) else value
@@ -29,9 +29,9 @@ def merge_fsdp_shards(checkpoint_dir, world_size, output_dir):
     os.makedirs(output_dir, exist_ok=True)
 
     full_state_dict = OrderedDict()
-    shard_metadata = {}  # 记录各参数的分片信息
+    shard_metadata = {}  # Record sharding information for each parameter
 
-    # 第一遍：收集参数元数据
+    # First pass: collect parameter metadata
     for rank in range(world_size):
         chunk = torch.load(f"{checkpoint_dir}/model_world_size_{world_size}_rank_{rank}.pt",
                            map_location='cpu')
@@ -44,10 +44,10 @@ def merge_fsdp_shards(checkpoint_dir, world_size, output_dir):
                     'is_sharded': len(value.shape) > 0
                 }
 
-    # 第二遍：合并参数
+    # Second pass: merge parameters
     for key in shard_metadata:
         if shard_metadata[key]['is_sharded']:
-            # 需要拼接的分片参数
+            # Parameters that need to be concatenated
             shards = []
             for rank in range(world_size):
                 chunk = torch.load(f"{checkpoint_dir}/model_world_size_{world_size}_rank_{rank}.pt",

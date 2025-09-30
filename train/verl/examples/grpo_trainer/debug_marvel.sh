@@ -5,7 +5,7 @@ python3 -m verl.trainer.main_marvel_ppo \
     data.train_batch_size=8 \
     data.video.dataset_name=libero_object_no_noops \
     processor.action_dim=7 \
-    processor.action_ranges_path=/202431205128/baseline/COPY/MARVEL/train/verl/ivideogpt/configs/libero_action_ranges.pth \
+    processor.action_ranges_path=train/verl/ivideogpt/configs/libero_action_ranges.pth \
     algorithm.adv_estimator=grpo \
     actor_rollout_ref.actor.log_l1_loss=True \
     actor_rollout_ref.actor.optim.lr=1e-6 \
@@ -40,13 +40,13 @@ python3 -m verl.trainer.main_marvel_ppo \
     trainer.save_last_num=3 \
     trainer.val_iters=10 \
     trainer.test_freq=-1 \
-    trainer.default_local_dir=/202431205128/baseline/COPY/MARVEL/checkpoints/libero/rlvr/${DATA_TODAY}/ckpt_${CKPT_STEPS}_${POST_EXP_NAME} \
+    trainer.default_local_dir=checkpoints/libero/rlvr/${date_today}/ckpt_${CKPT_STEPS}_${POST_EXP_NAME} \
     trainer.total_training_steps=420 \
     trainer.msp_reward_aggregate=mean \
     trainer.loss_weight.mse=0 \
     trainer.loss_weight.lpips=1 \
     trainer.loss_weight.mae=1 \
-    world_model_rollout.model.path=/202431205128/baseline/COPY/MARVEL/checkpoints/libero/final/backbone \
+    world_model_rollout.model.path=checkpoints/libero/final/backbone \
     world_model_rollout.model.use_remove_padding=False \
     world_model_rollout.world_model.vocab_size=9008 \
     world_model_rollout.rollout.tensor_model_parallel_size=1 \
@@ -57,7 +57,7 @@ python3 -m verl.trainer.main_marvel_ppo \
     world_model_rollout.world_model.interact=True \
     world_model_rollout.rollout.interact=True \
     world_model_rollout.rollout.interact_max_tokens=64 \
-    processor.tokenizer.path=/202431205128/baseline/COPY/MARVEL/checkpoints/libero/final/tokenizer  \
+    processor.tokenizer.path=checkpoints/libero/final/tokenizer  \
     processor.interact=True\
     processor.tokenizer.name=ctx_cnn \
     data.max_prompt_length=1095 \
@@ -68,5 +68,5 @@ python3 -m verl.trainer.main_marvel_ppo \
     processor.tokens_per_frame=64 \
     processor.processor_type=ctx_msp \
     processor.max_length=1592 \
-    actor_rollout_ref.model.ckpt_path=/202431205128/baseline/COPY/MARVEL/checkpoints/libero/rlvr/150000base \
+    actor_rollout_ref.model.ckpt_path=checkpoints/libero/rlvr/150000base \
 

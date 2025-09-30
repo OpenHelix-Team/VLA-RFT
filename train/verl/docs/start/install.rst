@@ -89,7 +89,7 @@ The following steps are quick installation guide for verl-SGLang.
     git clone https://github.com/volcengine/verl verl-sglang && cd verl-sglang
 
     # Create a virtual environment and install dependencies
-    python3 -m venv .venv --upgrade-deps && source .venv/bin/activate
+    python3 -m venv .venv --upgrade-deps && 
     python3 -m pip install .[sglang]
     python3 -m pip install .[gpu]
 

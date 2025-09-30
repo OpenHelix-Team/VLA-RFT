@@ -121,7 +121,7 @@ class vgg16(torch.nn.Module):
         super(vgg16, self).__init__()
         # vgg_pretrained_features = models.vgg16(pretrained=pretrained).features
         if pretrained:
-            local_vgg_path = "/202431205128/downloads/vgg16-397923af.pth"
+            local_vgg_path = "/path/to/your/owndownloads/vgg16-397923af.pth"
             vgg_model = models.vgg16(pretrained=False)
             if os.path.exists(local_vgg_path):
                 vgg_model.load_state_dict(torch.load(local_vgg_path, map_location='cpu'))

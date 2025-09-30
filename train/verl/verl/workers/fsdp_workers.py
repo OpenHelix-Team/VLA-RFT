@@ -331,50 +331,50 @@ class ActorRolloutRefWorker(Worker):
                 # from peft import LoraConfig, get_peft_model
                 # import re
 
-                # # 只让这些层的 LoRA 参与训练（低于阈值的 LoRA 注入但冻结 = 无影响）
-                # FREEZE_BELOW_LLM       = 12   # 训练 LLM 的 [12..23]
-                # FREEZE_BELOW_VIT_DINO  = 12   # 训练 DINO 的 [12..23]
-                # FREEZE_BELOW_VIT_FUSED = 14   # 训练 SigLIP/Fused 的 [14..26]
+                # # Only allow these layers' LoRA to participate in training (LoRA injected below threshold but frozen = no effect)
+                # FREEZE_BELOW_LLM       = 12   # Train LLM layers [12..23]
+                # FREEZE_BELOW_VIT_DINO  = 12   # Train DINO layers [12..23]
+                # FREEZE_BELOW_VIT_FUSED = 14   # Train SigLIP/Fused layers [14..26]
 
-                # # 同时匹配 LLM 与 ViT 的线性层名
+                # # Match linear layer names for both LLM and ViT
                 # LLM_LINEAR = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
                 # VIT_LINEAR = ["fc1", "fc2"]
 
-                # # ---- 单一 LoRA 适配器，覆盖三大分支 ----
+                # # ---- Single LoRA adapter covering three main branches ----
                 # lora_cfg = LoraConfig(
                 #     r=optim_config.lora_rank,
                 #     lora_alpha=optim_config.lora_rank,
                 #     lora_dropout=optim_config.lora_dropout,
-                #     target_modules=LLM_LINEAR + VIT_LINEAR,   # 一次性匹配三处的线性层
+                #     target_modules=LLM_LINEAR + VIT_LINEAR,   # Match linear layers across all three components at once
                 #     init_lora_weights="gaussian",
                 # )
-                # actor_module = get_peft_model(actor_module, lora_cfg)  # 适配器名默认 "default"
+                # actor_module = get_peft_model(actor_module, lora_cfg)  # Adapter name defaults to "default"
 
-                # # ---- 注入后，精确冻结低层 LoRA（按参数名里的层号）----
+                # # ---- After injection, precisely freeze lower layer LoRA (based on layer number in parameter name) ----
                 # re_llm   = re.compile(r"language_model\.model\.layers\.(\d+)\.")
                 # re_dino  = re.compile(r"vision_backbone\.featurizer\.blocks\.(\d+)\.")
                 # re_fused = re.compile(r"vision_backbone\.fused_featurizer\.blocks\.(\d+)\.")
 
                 # frozen, trainable = 0, 0
                 # for name, p in actor_module.named_parameters():
-                #     if "lora_" not in name:   # 只处理 LoRA 权重
+                #     if "lora_" not in name:   # Only process LoRA weights
                 #         continue
 
-                #     # LLM 低层
+                #     # LLM lower layers
                 #     m = re_llm.search(name)
                 #     if m and int(m.group(1)) < FREEZE_BELOW_LLM:
                 #         p.requires_grad = False
                 #         frozen += p.numel()
                 #         continue
 
-                #     # DINO 低层
+                #     # DINO lower layers
                 #     m = re_dino.search(name)
                 #     if m and int(m.group(1)) < FREEZE_BELOW_VIT_DINO:
                 #         p.requires_grad = False
                 #         frozen += p.numel()
                 #         continue
 
-                #     # SigLIP/Fused 低层
+                #     # SigLIP/Fused lower layers
                 #     m = re_fused.search(name)
                 #     if m and int(m.group(1)) < FREEZE_BELOW_VIT_FUSED:
                 #         p.requires_grad = False
@@ -484,7 +484,7 @@ class ActorRolloutRefWorker(Worker):
         if role == 'actor' and optim_config is not None:
             from verl.utils.torch_functional import get_constant_schedule_with_warmup
 
-            # 兼容 dict / 对象两种风格的 config 读取
+            # Compatible with both dict and object style config reading
             def _oget(cfg, key, default):
                 if hasattr(cfg, "get"):
                     try:
@@ -497,13 +497,13 @@ class ActorRolloutRefWorker(Worker):
             wd      = _oget(optim_config, "weight_decay", 1e-2)
             betas   = _oget(optim_config, "betas", (0.9, 0.999))
 
-            # 给 sigma_net 单独的超参（可按需在 config 里加；不写就用默认）
+            # Separate hyperparameters for sigma_net (can be added to config as needed; defaults used if not specified)
             sigma_lr = _oget(optim_config, "sigma_lr", base_lr * 2.0)
             sigma_wd = _oget(optim_config, "sigma_weight_decay", 0.0)
 
-            # —— 参数分组 —— #
+            # —— Parameter grouping —— #
             # actor_params   = [p for p in actor_module_fsdp.parameters() if p.requires_grad]
-            # queries_params = list(actor_module.action_queries.parameters())  # 被 FSDP ignore，需要单独加入
+            # queries_params = list(actor_module.action_queries.parameters())  # Ignored by FSDP, needs to be added separately
             head_params    = [p for p in self.action_head.parameters() if p.requires_grad]
             proj_params    = [p for p in self.noisy_action_projector.parameters() if p.requires_grad] + \
                             [p for p in self.proprio_projector.parameters() if p.requires_grad]
@@ -520,13 +520,13 @@ class ActorRolloutRefWorker(Worker):
                 print(f"# total trainable params: {total:,}")
 
             param_groups = [
-                {   # 基础组：VLA(Actor/FSDP) + action_head + 两个 projector
+                {   # Base group: VLA(Actor/FSDP) + action_head + two projectors
                     # "params": actor_params + head_params + proj_params,
                     "params": head_params + proj_params,
                     "lr": base_lr,
                     "weight_decay": wd,
                 },
-                {   # σ-net（θ'）：可用更大学习率、零/小权重衰减
+                {   # σ-net (θ'): can use larger learning rate, zero/small weight decay
                     "params": sigma_params,
                     "lr": sigma_lr,
                     "weight_decay": sigma_wd,
@@ -536,7 +536,7 @@ class ActorRolloutRefWorker(Worker):
 
             actor_optimizer = optim.AdamW(param_groups, betas=betas)
 
-            # # —— 统一调度（两个 param group 会一起按其各自 lr 比例缩放）—— #
+            # # —— Unified scheduling (two param groups will scale together according to their respective lr ratios) —— #
             # total_steps = _oget(optim_config, "total_training_steps", 0)
             # num_warmup_steps = _oget(optim_config, "lr_warmup_steps", -1)
             # if num_warmup_steps < 0:
@@ -557,14 +557,14 @@ class ActorRolloutRefWorker(Worker):
             print(f"Total steps: {total_steps}, num_warmup_steps: {num_warmup_steps}")
 
             def warmup_factor(step: int) -> float:
-                # 组0：线性 warmup 到 1.0，之后恒定
+                # Group 0: linear warmup to 1.0, then constant
                 if num_warmup_steps <= 0:
                     return 1.0
                 return min(1.0, float(step) / float(num_warmup_steps))
 
-            # 给每个 param group 一个独立的缩放函数：
-            #   - group 0（head+proj）：用 warmup_factor
-            #   - group 1（sigma）：始终 1.0（即不做 warmup，直接用配置的 sigma_lr）
+            # Give each param group an independent scaling function:
+            #   - group 0 (head+proj): use warmup_factor
+            #   - group 1 (sigma): always 1.0 (i.e., no warmup, use configured sigma_lr directly)
             actor_lr_scheduler = LambdaLR(
                 actor_optimizer,
                 lr_lambda=[warmup_factor, lambda step: 1.0]

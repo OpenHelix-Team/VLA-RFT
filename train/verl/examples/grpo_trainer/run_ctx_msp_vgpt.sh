@@ -4,7 +4,7 @@ python3 -m verl.trainer.main_vgpt_ppo \
     actor_rollout_ref.actor.interact=True \
     actor_rollout_ref.rollout.interact=True \
     actor_rollout_ref.rollout.interact_max_tokens=64 \
-    processor.tokenizer.path=/202431205128/baseline/MARVEL/checkpoints/libero/test/tokenizer  \
+    processor.tokenizer.path=checkpoints/libero/test/tokenizer  \
     processor.interact=True\
     processor.tokenizer.name=ctx_cnn \
     data.max_prompt_length=1095 \
@@ -16,13 +16,13 @@ python3 -m verl.trainer.main_vgpt_ppo \
     processor.processor_type=ctx_msp \
     processor.max_length=1592 \
     processor.action_dim=7 \
-    processor.action_ranges_path=/202431205128/baseline/MARVEL/vid_wm/ivideogpt/configs/vgpt/libero_action_ranges.pth \
+    processor.action_ranges_path=vid_wm/ivideogpt/configs/vgpt/libero_action_ranges.pth \
     data.video.segment_length=8 \
     algorithm.adv_estimator=grpo \
     data.train_batch_size=128 \
-    data.video.dataset_path=/202431205128/data/data_256 \
+    data.video.dataset_path=/path/to/your/owndata/data_256 \
     data.video.oxe_data_mixes_type=libero \
-    actor_rollout_ref.model.path=/202431205128/baseline/MARVEL/checkpoints/libero/backbone/transformed/test \
+    actor_rollout_ref.model.path=checkpoints/libero/backbone/transformed/test \
     actor_rollout_ref.actor.optim.lr=1e-5 \
     actor_rollout_ref.model.use_remove_padding=False \
     actor_rollout_ref.actor.vocab_size=9008 \
@@ -57,7 +57,7 @@ python3 -m verl.trainer.main_vgpt_ppo \
     trainer.save_freq=200 \
     trainer.val_iters=10 \
     trainer.test_freq=-1 \
-    trainer.default_local_dir=/202431205128/baseline/MARVEL/checkpoints/libero/rlvr/${DATA_TODAY}/ckpt_${CKPT_STEPS}_${POST_EXP_NAME} \
+    trainer.default_local_dir=checkpoints/libero/rlvr/${date_today}/ckpt_${CKPT_STEPS}_${POST_EXP_NAME} \
     trainer.total_training_steps=400 \
     trainer.msp_reward_aggregate=discount \
     trainer.loss_weight.mse=0 \

@@ -59,7 +59,7 @@ VLLM_REQUIRES = [
 'tensordict<=0.6.2',
 # 'cupy-cuda11x',
 'vllm==0.6.3',
-# '--find-links https://download.pytorch.org/whl/cu118'  # 指定 CUDA 11.8 的包索引
+# '--find-links https://download.pytorch.org/whl/cu118'  # Specify CUDA 11.8 package index
 ]
 SGLANG_REQUIRES = [
   'tensordict<=0.6.2', 

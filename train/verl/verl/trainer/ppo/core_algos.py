@@ -361,28 +361,28 @@ def compute_policy_loss(old_log_prob,
                         cliprange_high=None,
                         clip_ratio_c=3.0,
                         loss_agg_mode="token-mean",
-                        log_prob_aggregated=False):  # 新增参数
+                        log_prob_aggregated=False):
     """
-    新增参数:
+    Args:
         log_prob_aggregated: (bool)
-            如果为True，表示log_prob和old_log_prob已经是聚合后的形状(bs, 1)
-            如果为False，保持原有逻辑，形状为(bs, response_length)
+            If True, log_prob and old_log_prob are already aggregated with shape (bs, 1)
+            If False, maintains original logic with shape (bs, response_length)
     """
     assert clip_ratio_c > 1.0, f"The lower bound of the clip_ratio_c for dual-clip PPO should be greater than 1.0, but get the value: {clip_ratio_c}."
 
     if log_prob_aggregated:
-        # 处理已聚合的log_prob情况
-        # log_prob和old_log_prob形状: (bs, 1)
-        # advantages需要聚合到(bs, 1)
+        # Handle aggregated log_prob case
+        # log_prob and old_log_prob shape: (bs, 1)
+        # advantages need to be aggregated to (bs, 1)
         if advantages.dim() > 1 and advantages.shape[-1] > 1:
-            # 将advantages按照response_mask聚合
+            # Aggregate advantages according to response_mask
             advantages_agg = torch.sum(advantages * response_mask, dim=-1, keepdim=True) / torch.sum(response_mask, dim=-1, keepdim=True)
         else:
             advantages_agg = advantages
 
         negative_approx_kl = (log_prob - old_log_prob) / torch.sum(response_mask, dim=-1, keepdim=True)  # (bs, 1)
         ratio = torch.exp(negative_approx_kl)  # (bs, 1)
-        ppo_kl = torch.mean(-negative_approx_kl)  # 标量
+        ppo_kl = torch.mean(-negative_approx_kl)  # scalar
         
         pg_losses1 = -advantages_agg * ratio
         if cliprange_low is None:
@@ -398,10 +398,9 @@ def compute_policy_loss(old_log_prob,
         pg_clipfrac_lower = torch.mean(torch.gt(clip_pg_losses2, pg_losses3) * (advantages_agg < 0).float())
         
         pg_losses = torch.where(advantages_agg < 0, clip_pg_losses2, clip_pg_losses1)
-        pg_loss = torch.mean(pg_losses)  # 直接取均值
+        pg_loss = torch.mean(pg_losses)  # direct mean
         
     else:
-        # 原有逻辑保持不变
         negative_approx_kl = log_prob - old_log_prob
         ratio = torch.exp(negative_approx_kl)
         ppo_kl = verl_F.masked_mean(-negative_approx_kl, response_mask)

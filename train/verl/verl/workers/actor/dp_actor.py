@@ -89,7 +89,7 @@ class DataParallelPPOActor(BasePPOActor):
         Run a forward pass on a micro batch.
 
         Returns:
-            log_probs: (B, chunk_len*action_dim)  # ← 逐维累计后的 logp
+            log_probs: (B, chunk_len*action_dim)  # Accumulated logp per dimension
             entropy:   (B,)  (if return_entropy is True)
         """
         x_chain = micro_batch['x_chain']                          # (B, K+1, chunk_len, action_dim)
@@ -109,7 +109,7 @@ class DataParallelPPOActor(BasePPOActor):
         dt = -1.0 / K
 
         device = input_ids.device
-        # 逐维累计的 logp（float32 累加更稳）
+        # Accumulated logp per dimension (float32 accumulation for better stability)
         logp_per_dim = torch.zeros(B, chunk_len, action_dim, device=device, dtype=torch.float32)
         entropy_per_dim   = torch.zeros(B, chunk_len, action_dim, device=device, dtype=torch.float32)
         const_term = 0.5 * (torch.log(torch.tensor(2.0 * torch.pi, device=device, dtype=torch.float32)) + 1.0)  # 0.5*log(2πe)
@@ -148,7 +148,7 @@ class DataParallelPPOActor(BasePPOActor):
             t_embed = torch.tensor([[t_scalar]], device=device, dtype=x_k.dtype)  # (1, 1)
 
             with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
-                # flow & std 与生成时同一套输入
+                # flow & std use the same inputs as during generation
                 flow = self.action_head.predict_flow(
                     all_hidden_states,
                     noisy_actions=x_k,
@@ -178,10 +178,10 @@ class DataParallelPPOActor(BasePPOActor):
             logp_per_dim += step_logp
 
             if return_entropy:
-                # per-dim entropy 累计：log σ + 0.5*log(2πe)
+                # per-dim entropy accumulation: log σ + 0.5*log(2πe)
                 entropy_per_dim += log_std.to(torch.float32) + const_term              # (B, chunk_len, action_dim)
         # breakpoint()
-        # 展平成 (B, chunk_len*action_dim)
+        # Flatten to (B, chunk_len*action_dim)
         logp_vec = logp_per_dim.reshape(B, chunk_len * action_dim).to(torch.bfloat16)
         if return_entropy:
             entropy_per_dim = entropy_per_dim / (K + 1)  
@@ -205,7 +205,7 @@ class DataParallelPPOActor(BasePPOActor):
                 if p.grad is None:
                     continue
                 if not torch.isfinite(p.grad).all():
-                    # 打印一个示例，便于快速定位
+                    # Print an example for quick debugging
                     with torch.no_grad():
                         g = p.grad
                         print(f"[Nonfinite] {name}: param shape={tuple(p.shape)} "
@@ -216,16 +216,16 @@ class DataParallelPPOActor(BasePPOActor):
             return False
 
         def clip_one(module, name):
-            """返回 (norm, ok)；ok=False 表示非有限"""
+            """Return (norm, ok); ok=False indicates non-finite values"""
             if module is None:
                 return 0.0, True
-            # 先做非有限检查，能更早定位问题
+            # Check for non-finite values first to identify issues early
             if has_nonfinite_grads(module, name):
                 return float("nan"), False
 
             try:
                 if isinstance(module, FSDP):
-                    n = module.clip_grad_norm_(max_norm=max_norm)  # FSDP 自带全局规约
+                    n = module.clip_grad_norm_(max_norm=max_norm)  # FSDP has built-in global reduction
                     n = float(n) if not isinstance(n, float) else n
                 else:
                     n = torch.nn.utils.clip_grad_norm_(module.parameters(), max_norm=max_norm,
@@ -240,7 +240,6 @@ class DataParallelPPOActor(BasePPOActor):
                 return n, False
             return n, True
 
-        # ---- 要裁剪的模块列表（名称仅用于日志）----
         modules = []
         # modules.append(("actor", self.actor_module))
         modules.append(("action_head", getattr(self, "action_head", None)))
@@ -254,7 +253,7 @@ class DataParallelPPOActor(BasePPOActor):
         if not isinstance(self.actor_module, FSDP):
             raise NotImplementedError("clip_grad_norm_ is not implemented for non-FSDP actor")
 
-        # ---- 逐组裁剪 + 合成全局范数 ----
+        # ---- Clip gradients group by group + compute global norm ----
         total_sq = 0.0
         all_ok = True
         per_group = {}
@@ -265,7 +264,7 @@ class DataParallelPPOActor(BasePPOActor):
             if math.isfinite(n):
                 total_sq += (n * n)
 
-        # 最后的“全局”L2 范数（各不相交参数组的 L2 合成）
+        # Final "global" L2 norm (composition of L2 norms from disjoint parameter groups)
         global_norm = float(math.sqrt(total_sq)) if math.isfinite(total_sq) else float("nan")
 
         if not all_ok or not math.isfinite(global_norm):
@@ -273,34 +272,10 @@ class DataParallelPPOActor(BasePPOActor):
             self.actor_optimizer.zero_grad(set_to_none=True)
             return float("nan")
 
-        # 一切正常，执行优化步
+        # Everything is normal, perform optimization step
         self.actor_optimizer.step()
         return global_norm
 
-    # def _optimizer_step(self):
-    #     assert self.config.grad_clip is not None
-
-    #     if isinstance(self.actor_module, FSDP):
-    #         grad_norms = []
-    #         grad_norms.append(self.actor_module.clip_grad_norm_(max_norm=self.config.grad_clip))
-    #         grad_norms.append(torch.nn.utils.clip_grad_norm_(self.action_head.parameters(), max_norm=self.config.grad_clip))
-    #         grad_norms.append(torch.nn.utils.clip_grad_norm_(self.sigma_net.parameters(), max_norm=self.config.grad_clip))
-    #         if self.proprio_projector is not None:
-    #             grad_norms.append(torch.nn.utils.clip_grad_norm_(self.proprio_projector.parameters(), max_norm=self.config.grad_clip))
-    #         if self.noisy_action_projector is not None:
-    #             grad_norms.append(torch.nn.utils.clip_grad_norm_(self.noisy_action_projector.parameters(), max_norm=self.config.grad_clip))
-    #         grad_norm = max(grad_norms)
-    #     else:
-    #         raise NotImplementedError("clip_grad_norm_ is not implemented for non-FSDP actor")
-    #         grad_norm = torch.nn.utils.clip_grad_norm_(self.actor_module.parameters(), max_norm=self.config.grad_clip)
-
-    #     # if grad_norm is not finite, skip the update
-    #     if not torch.isfinite(grad_norm):
-    #         print(f"WARN: grad_norm is not finite: {grad_norm}")
-    #         self.actor_optimizer.zero_grad()
-    #     else:
-    #         self.actor_optimizer.step()
-    #     return grad_norm
 
     def _set_to_eval(self):
         self.actor_module.eval()
