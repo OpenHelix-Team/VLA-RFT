@@ -50,7 +50,7 @@ uv pip install -r train/verl/requirements.txt
 
 # 3) Install vla-adapter
 uv pip install git+https://github.com/moojink/dlimp_openvla.git
-uv pip install -e vla-adapter/openvla-oft
+uv pip install -e train/verl/vla-adapter/openvla-oft
 
 # 4) Install LIBERO requirements
 uv pip install -e third_party/LIBERO
