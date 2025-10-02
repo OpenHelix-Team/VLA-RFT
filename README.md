@@ -132,11 +132,17 @@ If you use VLA-RFT in your research, please cite:
   journal={arXiv preprint arXiv:2509.09372},
   year={2025}
 }
-
-@article{vla-rft2025,
-  title={VLA-RFT: Vision-Language-Action Models with Reinforcement Fine-Tuning},
-  year={2025}
-}
+```
+```bibtex
+@misc{li2025vlarftvisionlanguageactionreinforcementfinetuning,
+      title={VLA-RFT: Vision-Language-Action Reinforcement Fine-tuning with Verified Rewards in World Simulators}, 
+      author={Hengtao Li and Pengxiang Ding and Runze Suo and Yihao Wang and Zirui Ge and Dongyuan Zang and Kexian Yu and Mingyang Sun and Hongyin Zhang and Donglin Wang and Weihua Su},
+      year={2025},
+      eprint={2510.00406},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO},
+      url={https://arxiv.org/abs/2510.00406}, 
+      }
 ```
 
 
