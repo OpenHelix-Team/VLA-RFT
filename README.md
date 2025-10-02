@@ -28,29 +28,31 @@ Vision-Language-Action (VLA) models enable embodied decision-making but rely hea
 - PyTorch 2.4+
 - UV package manager
 
+### Clone the repository
+```bash
+# Clone the repository
+git clone https://github.com/OpenHelix-Team/VLA-RFT.git
+cd VLA-RFT
+```
 ### Installation(If your network is unrestricted)
 
 ```bash
-# 1) Clone the repository
-git clone https://github.com/OpenHelix-Team/VLA-RFT.git
-cd VLA-RFT
+# 1) Set up the environment
 git submodule update --init --recursive
-
-# 2) Set up the environment
 uv venv --seed -p 3.10
 source .venv/bin/activate
 
-# 3) Install dependencies
+# 2) Install dependencies
 uv pip install -e train/verl/".[gpu]"
 uv pip install 'https://github.com/Dao-AILab/flash-attention/releases/download/v2.6.0.post1/flash_attn-2.6.0.post1+cu122torch2.4cxx11abiFALSE-cp310-cp310-linux_x86_64.whl'
 uv pip install -e train/verl/".[vllm]"
 uv pip install -r train/verl/requirements.txt
 
-# 4) Install vla-adapter
-uv pip install -e third_party/dlimp_openvla
-uv pip install -e train/verl/vla-adapter/openvla-oft
+# 3) Install vla-adapter
+uv pip install git+https://github.com/moojink/dlimp_openvla.git
+uv pip install -e vla-adapter/openvla-oft
 
-# 5) Install LIBERO requirements
+# 4) Install LIBERO requirements
 uv pip install -e third_party/LIBERO
 ```
 
