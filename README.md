@@ -25,41 +25,37 @@ Vision-Language-Action (VLA) models enable embodied decision-making but rely hea
 
 - Python 3.10+
 - CUDA 12.2+
-- uv package manager
+- PyTorch 2.4+
+- UV package manager
 
-### Installation
-
+### Installation(If your network is unrestricted)
 
 ```bash
-# Clone the repository
+# 1) Clone the repository
 git clone https://github.com/OpenHelix-Team/VLA-RFT.git
 cd VLA-RFT
+git submodule update --init --recursive
 
-# Set up the environment
+# 2) Set up the environment
 uv venv --seed -p 3.10
 source .venv/bin/activate
 
-# Install dependencies
-cd train/verl
-uv pip install -e ".[gpu]"
+# 3) Install dependencies
+uv pip install -e train/verl/".[gpu]"
+uv pip install 'https://github.com/Dao-AILab/flash-attention/releases/download/v2.6.0.post1/flash_attn-2.6.0.post1+cu122torch2.4cxx11abiFALSE-cp310-cp310-linux_x86_64.whl'
+uv pip install -e train/verl/".[vllm]"
+uv pip install -r train/verl/requirements.txt
 
-# Download the required flash-attn package from: https://github.com/Dao-AILab/flash-attention/releases/download/v2.6.0.post1/flash_attn-2.6.0.post1+cu122torch2.4cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
-uv pip install /path/to/flash_attn-2.6.0.post1+cu122torch2.4cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
-uv pip install -e ".[vllm]"
+# 4) Install vla-adapter
+uv pip install -e third_party/dlimp_openvla
+uv pip install -e train/verl/vla-adapter/openvla-oft
 
-# Install vla-adapter
-# Download the required dlimp package from:https://github.com/moojink/dlimp_openvla
-uv pip install /path/to/dlimp
-uv pip install -r requirements.txt
-cd vla-adapter/openvla-oft
-uv pip install -e .
-
-# Install LIBERO requirements
-cd ../../../../eval/
-git clone https://github.com/Lifelong-Robot-Learning/LIBERO.git
-uv pip install -e LIBERO
+# 5) Install LIBERO requirements
+uv pip install -e third_party/LIBERO
 ```
 
+### Installation(If your network is restricted)
+Please refer to the instructions at [third_party/README.md](third_party/README.md).
 
 ### Basic Usage
 
