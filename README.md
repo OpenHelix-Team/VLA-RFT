@@ -3,6 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/release/python-310/)
 [![arXiv 2510.00406](https://img.shields.io/badge/arXiv-2510.00406-b31b1b?logo=arXiv&logoColor=white)](https://arxiv.org/abs/2510.00406)
+[![Project Page](https://img.shields.io/badge/Project%20Page-vla--rft.github.io-6f42c1?logo=github&logoColor=white)](https://vla-rft.github.io/)
 
 <div id="top" align="center">
 <p align="center">
@@ -17,9 +18,6 @@
 </div>
 
 Vision-Language-Action (VLA) models enable embodied decision-making but rely heavily on imitation learning, leading to compounding errors and poor robustness under distribution shift. Reinforcement learning (RL) can mitigate these issues yet typically demands costly real-world interactions or suffers from sim-to-real gaps. We introduce VLA-RFT, a reinforcement fine-tuning framework that leverages a data-driven world model as a controllable simulator. Trained from real interaction data, the simulator predicts future visual observations conditioned on actions, allowing policy rollouts with dense, trajectory-level rewards derived from goal-achieving references. This design delivers an efficient and action-aligned learning signal, drastically lowering sample requirements. **With fewer than 400 fine-tuning steps, VLA-RFT surpasses strong supervised baselines and achieves greater efficiency than simulator-based RL.** Moreover, it exhibits strong robustness under perturbed conditions, sustaining stable task execution. Our results establish world-model-based RFT as a practical post-training paradigm to enhance the generalization and robustness of VLA models. 
-
-> **🌍 Project page: https://vla-rft.github.io/**<br/>
-
 
 ## 🚀 Quick Start
 
