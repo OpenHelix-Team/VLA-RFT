@@ -108,6 +108,12 @@ With fewer than 400 fine-tuning steps, VLA-RFT surpasses strong supervised basel
 <img src=image/Table2.png width=90% />
 </p>
 </div>
+
+<div id="top" align="center">
+<p align="center">
+<img src=image/Table3.png width=90% />
+</p>
+</div>
 *Please refer to our paper for detailed benchmark results.*
 
 ## 📝 TODO
