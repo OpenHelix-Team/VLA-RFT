@@ -1,12 +1,31 @@
 set -x
 
+# Run with: bash scripts/libero/post_train_rlvr.sh
+
 python3 -m verl.trainer.main_vla_rft_grpo \
-    processor.use_img_gt_ac=True \
+    trainer.total_training_steps=400 \
+    trainer.save_freq=50 \
+    trainer.nnodes=1 \
+    trainer.n_gpus_per_node=4 \
+    trainer.use_ac_reward=False \
+    trainer.ac_reward_type='l1' \
+    trainer.reward_fn=mae \
+    trainer.logger=['tensorboard'] \
+    trainer.project_name='vla_rft' \
+    trainer.experiment_name='vla_rft_fm' \
+    trainer.save_last_freq=20 \
+    trainer.save_last_num=2 \
+    trainer.val_iters=10 \
+    trainer.test_freq=-1 \
+    trainer.default_local_dir=checkpoints/libero/RFT/${LIBERO_TASK_NAME}/${DATE}_${POST_EXP_NAME} \
+    trainer.msp_reward_aggregate=mean \
+    trainer.msp_reward_discount=0.95 \
+    trainer.loss_weight.mse=0 \
+    trainer.loss_weight.lpips=1 \
+    trainer.loss_weight.mae=1 \
     data.train_batch_size=16 \
     data.video.dataset_path=data/modified_libero_rlds \
     data.video.dataset_name=libero_${LIBERO_TASK_NAME}_no_noops \
-    processor.action_dim=7 \
-    processor.action_ranges_path=train/verl/ivideogpt/configs/libero_action_ranges.pth \
     algorithm.adv_estimator=grpo \
     actor_rollout_ref.actor.log_l1_loss=True \
     actor_rollout_ref.actor.optim.lr=1e-6 \
@@ -29,29 +48,10 @@ python3 -m verl.trainer.main_vla_rft_grpo \
     actor_rollout_ref.rollout.n=16 \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=8 \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
+    actor_rollout_ref.model.ckpt_path=checkpoints/libero/Base/${LIBERO_TASK_NAME} \
+    actor_rollout_ref.model.cfg_path=checkpoints/libero/Base/${LIBERO_TASK_NAME}/config.json \
     algorithm.use_kl_in_reward=False \
-    trainer.use_ac_reward=False \
-    trainer.ac_reward_type='l1' \
-    trainer.reward_fn=mae \
-    trainer.logger=['tensorboard'] \
-    trainer.project_name='vla_rft' \
-    trainer.experiment_name='vla_rft_fm' \
-    trainer.n_gpus_per_node=4 \
-    trainer.nnodes=1 \
-    trainer.save_freq=50 \
-    trainer.save_last_freq=20 \
-    trainer.save_last_num=2 \
-    trainer.val_iters=10 \
-    trainer.test_freq=-1 \
-    trainer.default_local_dir=checkpoints/libero/rlvr/ckpt_${CKPT_STEPS}/${POST_EXP_NAME}_${DATE} \
-    trainer.img_save_dir=plots/pred_traj/${LIBERO_TASK_NAME} \
-    trainer.total_training_steps=1 \
-    trainer.msp_reward_aggregate=mean \
-    trainer.msp_reward_discount=0.95 \
-    trainer.loss_weight.mse=0 \
-    trainer.loss_weight.lpips=1 \
-    trainer.loss_weight.mae=1 \
-    world_model_rollout.model.path=checkpoints/libero/world_model/${LIBERO_TASK_NAME} \
+    world_model_rollout.model.path=checkpoints/libero/WorldModel/${LIBERO_TASK_NAME} \
     world_model_rollout.model.use_remove_padding=False \
     world_model_rollout.world_model.vocab_size=9008 \
     world_model_rollout.rollout.tensor_model_parallel_size=1 \
@@ -65,7 +65,9 @@ python3 -m verl.trainer.main_vla_rft_grpo \
     world_model_rollout.world_model.interact=True \
     world_model_rollout.rollout.interact=True \
     world_model_rollout.rollout.interact_max_tokens=64 \
-    processor.tokenizer.path=checkpoints/libero/world_model/tokenizer \
+    processor.action_dim=7 \
+    processor.action_ranges_path=train/verl/ivideogpt/configs/libero_action_ranges.pth \
+    processor.tokenizer.path=checkpoints/libero/WorldModel/Tokenizer \
     processor.interact=True\
     processor.tokenizer.name=ctx_cnn \
     data.max_prompt_length=1095 \
@@ -76,5 +78,4 @@ python3 -m verl.trainer.main_vla_rft_grpo \
     processor.tokens_per_frame=64 \
     processor.processor_type=ctx_msp \
     processor.max_length=1663 \
-    actor_rollout_ref.model.ckpt_path=checkpoints/libero/rlvr/150000base \
-    actor_rollout_ref.model.cfg_path=checkpoints/libero/rlvr/150000base/config.json \
+    processor.use_img_gt_ac=True \

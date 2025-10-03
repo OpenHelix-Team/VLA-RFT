@@ -24,7 +24,7 @@ json_numpy.patch()
 from prismatic.extern.hf.configuration_prismatic import OpenVLAConfig
 from prismatic.extern.hf.modeling_prismatic import OpenVLAForActionPrediction
 from prismatic.extern.hf.processing_prismatic import PrismaticImageProcessor, PrismaticProcessor
-from prismatic.models.action_heads import DiffusionActionHead, L1RegressionActionHead, DiffusionActionHead_V1, FlowMatchingActionHead, L1RegressionActionHead_V1
+from prismatic.models.action_heads import FlowMatchingActionHead
 from prismatic.models.film_vit_wrapper import FiLMedPrismaticVisionBackbone
 from prismatic.models.projectors import NoisyActionProjector, ProprioProjector
 from prismatic.vla.constants import (
@@ -479,7 +479,7 @@ def get_noisy_action_projector(cfg: Any, llm_dim: int) -> NoisyActionProjector:
     return noisy_action_projector
 
 
-def get_action_head(cfg: Any, llm_dim: int) -> Union[L1RegressionActionHead, DiffusionActionHead]:
+def get_action_head(cfg: Any, llm_dim: int):
     """
     Get action head for continuous value prediction.
 
@@ -488,15 +488,14 @@ def get_action_head(cfg: Any, llm_dim: int) -> Union[L1RegressionActionHead, Dif
         llm_dim: Dimension of the language model
 
     Returns:
-        Union[L1RegressionActionHead, DiffusionActionHead]: The initialized action head
+        The initialized action head
 
-    Raises:
-        AssertionError: If both L1 regression and diffusion are specified
     """
     assert not (cfg.use_l1_regression and cfg.use_diffusion), "Cannot use both L1 regression and diffusion action head!"
 
     # Initialize appropriate action head based on configuration
     if cfg.use_l1_regression:
+        raise NotImplementedError("L1RegressionActionHead is not implemented yet.")
         if cfg.save_version == 'v1':
             action_head = L1RegressionActionHead_V1(
                 input_dim=llm_dim, hidden_dim=llm_dim, action_dim=ACTION_DIM
@@ -506,6 +505,7 @@ def get_action_head(cfg: Any, llm_dim: int) -> Union[L1RegressionActionHead, Dif
                 input_dim=llm_dim, hidden_dim=llm_dim, action_dim=ACTION_DIM
             )
     elif cfg.use_diffusion:
+        raise NotImplementedError("Diffusion is not implemented yet.")
         if cfg.save_version == 'v1':
             action_head = DiffusionActionHead_V1(
                 input_dim=llm_dim, hidden_dim=llm_dim, action_dim=ACTION_DIM, num_diffusion_steps=cfg.num_diffusion_steps

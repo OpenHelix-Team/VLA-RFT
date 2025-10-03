@@ -128,39 +128,13 @@ class GenerateConfig:
     wandb_project: str = "your-wandb-project"        # Name of WandB project
 
     seed: int = 7                                    # Random Seed (for reproducibility)
-    # variance_scale: float = 1.0                      # Scale of initial state variance (1.0 = default)
-    # perturbation_seed: int = 0                       # Random seed for initial state perturbations
     # fmt: on
     save_version: str = "raw"                                           # version of exps
-def save_action_data(trajectory_actions, trajectory_successes, model_name, task_id, task_description, save_path, task_suite_name=None):
 
-    data = {
-        'actions': [actions.tolist() for actions in trajectory_actions],
-        'successes': trajectory_successes,
-        'model_name': model_name,
-        'task_id': task_id,
-        'task_description': task_description,
-        'task_suite_name': task_suite_name 
-    }
-    
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    with open(save_path, 'w') as f:
-        json.dump(data, f)
-    
-    print(f"Action data saved to {save_path}")
-def load_action_data(load_path):
-
-    with open(load_path, 'r') as f:
-        data = json.load(f)
-    
-    data['actions'] = [np.array(actions) for actions in data['actions']]
-    return data
 
 def validate_config(cfg: GenerateConfig) -> None:
     """Validate configuration parameters."""
     assert cfg.pretrained_checkpoint is not None, "pretrained_checkpoint must not be None!"
-
-    # import pdb; pdb.set_trace()
 
     if "image_aug" in str(cfg.pretrained_checkpoint):
         assert cfg.center_crop, "Expecting `center_crop==True` because model was trained with image augmentations!"
@@ -169,7 +143,6 @@ def validate_config(cfg: GenerateConfig) -> None:
 
     # Validate task suite
     assert cfg.task_suite_name in [suite.value for suite in TaskSuite], f"Invalid task suite: {cfg.task_suite_name}"
-
 
 def initialize_model(cfg: GenerateConfig):
     """Initialize model and associated components."""
@@ -225,9 +198,9 @@ def check_unnorm_key(cfg: GenerateConfig, model) -> None:
 def setup_logging(cfg: GenerateConfig):
     """Set up logging to file and optionally to wandb."""
     # Create run ID
-    run_id = f"EVAL-{cfg.task_suite_name}-{cfg.model_family}-{DATE_TIME}"
+    run_id = f"{DATE_TIME}"
     if cfg.run_id_note is not None:
-        run_id += f"--{cfg.run_id_note}"
+        run_id = f"{cfg.run_id_note}--" + run_id
 
     # Set up local logging
     os.makedirs(cfg.local_log_dir, exist_ok=True)
@@ -373,8 +346,6 @@ def run_episode(
                 )
                 action_queue.extend(actions)
 
-            # import pdb; pdb.set_trace()
-
             # Get action from queue
             action = action_queue.popleft()
 
@@ -383,7 +354,7 @@ def run_episode(
 
             # Execute action in environment
             obs, reward, done, info = env.step(action.tolist())
-            # breakpoint()
+
             if done:
                 success = True
                 break
@@ -412,9 +383,7 @@ def run_task(
 ):
     """Run evaluation for a single task."""
     # Get task
-    # task_id = 3
     task = task_suite.get_task(task_id)
-    # task = task_suite.get_task(10)
 
     # Get initial states
     initial_states, all_initial_states = load_initial_states(cfg, task_suite, task_id, log_file)
@@ -422,20 +391,15 @@ def run_task(
     # Initialize environment and get task description
     env, task_description = get_libero_env(task, cfg.model_family, resolution=cfg.env_img_res)
 
-    trajectory_actions = []
-    trajectory_successes = []
-
     # Start episodes
     task_episodes, task_successes = 0, 0
     for episode_idx in tqdm.tqdm(range(cfg.num_trials_per_task)):
         log_message(f"\nTask: {task_description}", log_file)
-        # breakpoint()
+
         # Handle initial state
         if cfg.initial_states_path == "DEFAULT":
             # Use default initial state
             initial_state = initial_states[episode_idx]
-            # initial_state = initial_states[0]  # DEBUG
-            # breakpoint()
         else:
             # Get keys for fetching initial episode state from JSON
             initial_states_task_key = task_description.replace(" ", "_")
@@ -513,12 +477,6 @@ def eval_libero(cfg: GenerateConfig) -> float:
     # Initialize model and components
     model, action_head, proprio_projector, noisy_action_projector, processor = initialize_model(cfg)
 
-    # for name, param in model.named_parameters():
-    #     if 'action_queries' in name: 
-    #         print(f"{name}: {param}")
-
-    # import pdb; pdb.set_trace()
-
     # Get expected image dimensions
     resize_size = get_image_resize_size(cfg)
 
@@ -527,9 +485,6 @@ def eval_libero(cfg: GenerateConfig) -> float:
 
     # Initialize LIBERO task suite
     benchmark_dict = benchmark.get_benchmark_dict()
-    # variance_scale = getattr(cfg, 'variance_scale', 1.0)
-    # perturbation_seed = getattr(cfg, 'perturbation_seed', 0)
-    # task_suite = benchmark_dict[cfg.task_suite_name](variance_scale=variance_scale, seed=perturbation_seed)
     task_suite = benchmark_dict[cfg.task_suite_name]()
 
 
