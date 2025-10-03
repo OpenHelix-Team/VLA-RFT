@@ -59,6 +59,10 @@ uv pip install -e third_party/LIBERO
 ### Installation(If your network is restricted)
 Please refer to the instructions at [third_party/README.md](third_party/README.md).
 
+
+### Data Preparation
+Please refer to the instructions at [data/README.md](data/README.md).
+
 ### Basic Usage
 
 #### LIBERO Evaluation Example
@@ -67,7 +71,12 @@ Please refer to the instructions at [third_party/README.md](third_party/README.m
 cd scripts/libero
 bash eval_libero.sh
 ```
+When using LIBERO, you may get an error message like `AttributeError: 'NoneType' object has no attribute 'eglQueryString'`. You can use:
 
+```bash
+sudo apt-get update
+sudo apt-get install libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libglew-dev
+```
 #### Training Example
 
 ```bash
